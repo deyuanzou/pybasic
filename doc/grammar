@@ -1,20 +1,7 @@
-#########################
-# 理论文法
-#########################
-G[E]:
-    E → E PLUS E
-    E → E MINUS E
-    E → E MUL E
-    E → E DIV E
-    E → (E)
-    E → INT|FLOAT
-
-
-#########################
-# 编程文法
-#########################
 expr : term ((PLUS|MINUS) term)*
 
 term : factor ((MUL|DIV) factor)*      /* 乘除先于加减 */
 
 factor : INT|FLOAT
+       : (PLUS|MINUS) factor
+       : LPAREN expr RPAREN

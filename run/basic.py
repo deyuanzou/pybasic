@@ -1,3 +1,8 @@
+#########################
+# Import 项目依赖
+#########################
+from string_with_arrows import *
+
 ##########################
 # Specialness 作特殊处理的值
 ##########################
@@ -17,12 +22,18 @@ class Error:
     def as_string(self):
         result = f'{self.error_name}:{self.details}'
         result += f' in File {self.pos_start.fn}, Line {self.pos_start.row + 1}, Column {self.pos_start.col}'
+        result += '\n\n' + string_with_arrows(self.pos_start.ft, self.pos_start, self.pos_end)
         return result
 
 
 class IllegalCharError(Error):
     def __init__(self, pos_start, pos_end, details):
         super().__init__(pos_start, pos_end, 'IllegalCharError', details)
+
+
+class InvalidSyntaxError(Error):
+    def __init__(self, pos_start, pos_end, details=''):
+        super().__init__(pos_start, pos_end, 'InvalidSyntaxError', details)
 
 
 ##########################
@@ -36,7 +47,7 @@ class Position:
         self.fn = fn
         self.ft = ft
 
-    def forward(self, current_char):
+    def forward(self, current_char=None):
         self.idx += 1
         self.col += 1
 
@@ -60,12 +71,21 @@ TT_MUL = 'MUL'
 TT_DIV = 'DIV'
 TT_LPAREN = 'LPAREN'
 TT_RPAREN = 'RPAREN'
+TT_EOF = 'EOF'
 
 
 class Token:
-    def __init__(self, type_, value=None):  # 这里使用type_是为了防止将内置名称type覆盖
+    def __init__(self, type_, value=None, pos_start=None, pos_end=None):  # 这里使用type_是为了防止将内置名称type覆盖
         self.type = type_
         self.value = value
+
+        if pos_start:
+            self.pos_start = pos_start.copy()
+            self.pos_end = pos_start.copy()
+            self.pos_end.forward()
+
+        if pos_end:
+            self.pos_end = pos_end
 
     def __repr__(self):
         if self.value:
@@ -98,34 +118,35 @@ class Lexer:
                 tokens.append(self.make_num())
                 self.read_a_char()
             elif self.current_char == '+':
-                tokens.append(Token(TT_PLUS))
+                tokens.append(Token(TT_PLUS, pos_start=self.pos))
                 self.read_a_char()
             elif self.current_char == '-':
-                tokens.append(Token(TT_MINUS))
+                tokens.append(Token(TT_MINUS, pos_start=self.pos))
                 self.read_a_char()
             elif self.current_char == '*':
-                tokens.append(Token(TT_MUL))
+                tokens.append(Token(TT_MUL, pos_start=self.pos))
                 self.read_a_char()
             elif self.current_char == '/':
-                tokens.append(Token(TT_DIV))
+                tokens.append(Token(TT_DIV, pos_start=self.pos))
                 self.read_a_char()
             elif self.current_char == '(':
-                tokens.append(Token(TT_LPAREN))
+                tokens.append(Token(TT_LPAREN, pos_start=self.pos))
                 self.read_a_char()
             elif self.current_char == ')':
-                tokens.append(Token(TT_RPAREN))
+                tokens.append(Token(TT_RPAREN, pos_start=self.pos))
                 self.read_a_char()
             else:
                 pos_start = self.pos.copy()
                 char = self.current_char
                 self.read_a_char()
                 return [], IllegalCharError(pos_start, self.pos, "'" + char + "'")
-
+        tokens.append(Token(TT_EOF, pos_start=self.pos))
         return tokens, None
 
     def make_num(self):
         num_str = ''
         dot_count = 0
+        pos_start = self.pos.copy()
 
         while self.current_char is not None and self.current_char in DIGITS + '.':
             if self.current_char == '.':
@@ -143,9 +164,9 @@ class Lexer:
         self.pos.idx -= 1
 
         if dot_count == 0:
-            return Token(TT_INT, int(num_str))
+            return Token(TT_INT, int(num_str), pos_start, self.pos)
         else:
-            return Token(TT_FLOAT, float(num_str))
+            return Token(TT_FLOAT, float(num_str), pos_start, self.pos)
 
 
 #########################
@@ -169,6 +190,41 @@ class BiOpNode:
         return f'({self.left_node}, {self.op_tok}, {self.right_node})'
 
 
+class UnaryOpNode:
+    def __init__(self, op_tok, node):
+        self.op_tok = op_tok
+        self.node = node
+
+    def __repr__(self):
+        return f'({self.op_tok}, {self.node})'
+
+
+
+
+#########################
+# ParseResult 解析结果
+#########################
+class ParseResult:
+    def __init__(self):
+        self.error = None
+        self.node = None
+
+    def register(self, res):
+        if isinstance(res, ParseResult):
+            if res.error:
+                self.error = res.error
+            return res.node
+        return res
+
+    def success(self, node):
+        self.node = node
+        return self
+
+    def fail(self, error):
+        self.error = error
+        return self
+
+
 #########################
 # Parser 语法解析器
 #########################
@@ -187,13 +243,42 @@ class Parser:
 
     def parse(self):
         res = self.expr()
+        if not res.error and self.current_tok.type != TT_EOF:
+            return res.fail(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                "Expected '+', '-', '*' or '/'"
+            ))
         return res
 
     def factor(self):
+        res = ParseResult()
         tok = self.current_tok
-        if tok.type in (TT_INT, TT_FLOAT):
-            self.forward()
-            return NumberNode(tok)
+        if tok.type in (TT_PLUS, TT_MINUS):
+            res.register(self.forward())
+            factor = res.register(self.factor())
+            if res.error:
+                return res
+            return res.success(UnaryOpNode(tok, factor))
+        elif tok.type in (TT_INT, TT_FLOAT):
+            res.register(self.forward())
+            return res.success(NumberNode(tok))
+        elif tok.type == TT_LPAREN:
+            res.register(self.forward())
+            expr = res.register(self.expr())
+            if res.error:
+                return res
+            if self.current_tok.type == TT_RPAREN:
+                res.register(self.forward())
+                return res.success(expr)
+            else:
+                return res.fail(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    "Expected ')'"
+                ))
+        return res.fail(InvalidSyntaxError(
+            tok.pos_start, tok.pos_end,
+            "Expected int or float"
+        ))
 
     def term(self):
         return self.bi_op(self.factor, (TT_MUL, TT_DIV))
@@ -202,13 +287,18 @@ class Parser:
         return self.bi_op(self.term, (TT_PLUS, TT_MINUS))
 
     def bi_op(self, func, ops):
-        left_node = func()
+        res = ParseResult()
+        left_node = res.register(func())
+        if res.error:
+            return res
         while self.current_tok.type in ops:
             op_tok = self.current_tok
-            self.forward()
-            right_node = func()
+            res.register(self.forward())
+            right_node = res.register(func())
+            if res.error:
+                return res
             left_node = BiOpNode(left_node, op_tok, right_node)
-        return left_node
+        return res.success(left_node)
 
 
 #########################
@@ -224,4 +314,4 @@ def run(fn, text):
     parser = Parser(tokens)
     ast = parser.parse()
 
-    return ast, None
+    return ast.node, ast.error
