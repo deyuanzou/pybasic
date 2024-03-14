@@ -5,7 +5,11 @@ import basic
 while True:
     text = input('basic > ')
     if text.startswith('$'):
-        os.system(text.replace('$', '', 1))
+        if text[1:] == 'exit':
+            print('bye')
+            exit(0)
+        else:
+            os.system(text.replace('$', '', 1))
     else:
         result, error = basic.run("<stdin>", text)
         if error:
