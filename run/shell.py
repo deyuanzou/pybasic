@@ -1,6 +1,9 @@
-import os
+from logo import *
 
+import os
 import basic
+
+welcome()
 
 while True:
     text = input('basic > ')
