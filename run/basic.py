@@ -199,8 +199,6 @@ class UnaryOpNode:
         return f'({self.op_tok}, {self.node})'
 
 
-
-
 #########################
 # ParseResult 解析结果
 #########################
@@ -302,6 +300,28 @@ class Parser:
 
 
 #########################
+# Interpreter 解释器
+#########################
+class Interpreter:
+    def visit(self, node):
+        method_name = f'visit_{type(node).__name__}'
+        method = getattr(self, method_name, self.no_visit_method)
+        return method(node)
+
+    def no_visit_method(self, node):
+        raise Exception(f'No visit_{type(node).__name__} method defined')
+
+    def visit_NumberNode(self, node):
+        print('Found number node!')
+
+    def visit_BiOpNode(self, node):
+        print('Found binary op node!')
+
+    def visit_UnaryOpNode(self, node):
+        print('Found unary op node!')
+
+
+#########################
 # Run 主程序
 #########################
 def run(fn, text):
@@ -313,5 +333,10 @@ def run(fn, text):
     # 生成语法树
     parser = Parser(tokens)
     ast = parser.parse()
+    if ast.error:
+        return None, ast.error
+    # 运行程序
+    interpreter = Interpreter()
+    interpreter.visit(ast.node)
 
-    return ast.node, ast.error
+    return None, None
