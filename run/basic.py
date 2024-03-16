@@ -123,7 +123,7 @@ class Token:
         if pos_end:
             self.pos_end = pos_end
 
-    def match(self, type_, value):
+    def matches(self, type_, value):
         return self.type == type_ and self.value == value
 
     def __repr__(self):
@@ -394,7 +394,7 @@ class Parser:
     def expr(self):
         res = ParseResult()
 
-        if self.current_tok.match(TT_KEYWORD, 'VAR'):
+        if self.current_tok.matches(TT_KEYWORD, 'VAR'):
             res.register_advancement()
             self.advance()
             if self.current_tok.type != TT_IDENTIFIER:
