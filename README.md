@@ -2,11 +2,7 @@
 用python实现的basic解释器
 
 # 运行方式
-进入run目录
-- cd run
-
-运行shell.py
-- python shell.py
+点击`.\run`目录下的`run.bat`
 
 # 清屏
 输入`$cls`
