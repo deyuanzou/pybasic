@@ -32,12 +32,17 @@ class Error:
 
 class IllegalCharError(Error):
     def __init__(self, pos_start, pos_end, details):
-        super().__init__(pos_start, pos_end, 'IllegalCharError', details)
+        super().__init__(pos_start, pos_end, 'Illegal Character', details)
+
+
+class ExpectedCharError(Error):
+    def __init__(self, pos_start, pos_end, details):
+        super().__init__(pos_start, pos_end, 'Expected Character', details)
 
 
 class InvalidSyntaxError(Error):
     def __init__(self, pos_start, pos_end, details=''):
-        super().__init__(pos_start, pos_end, 'InvalidSyntaxError', details)
+        super().__init__(pos_start, pos_end, 'Invalid Syntax', details)
 
 
 class RTError(Error):
@@ -103,19 +108,19 @@ TT_POW = 'POW'
 TT_ASSIGN = 'ASSIGN'
 TT_LPAREN = 'LPAREN'
 TT_RPAREN = 'RPAREN'
-# TT_EE = 'EE'
-# TT_NE = 'NE'
-# TT_LT = 'LT'
-# TT_GT = 'GT'
-# TT_LTE = 'LTE'
-# TT_GTE = 'GTE'
+TT_EQ = 'EQ'
+TT_NE = 'NE'
+TT_LT = 'LT'
+TT_GT = 'GT'
+TT_LTE = 'LTE'
+TT_GTE = 'GTE'
 TT_EOF = 'EOF'
 
 KEYWORDS = [
     'var',
-    # 'and',
-    # 'or',
-    # 'not'
+    'and',
+    'or',
+    'not'
 ]
 
 
@@ -144,6 +149,8 @@ class Token:
 #########################
 #  Lexer 词法分析器
 #########################
+
+
 class Lexer:
     def __init__(self, fn, text):
         self.fn = fn
@@ -183,14 +190,26 @@ class Lexer:
             elif self.current_char == '^':
                 tokens.append(Token(TT_POW, pos_start=self.pos))
                 self.advance()
-            elif self.current_char == '=':
-                tokens.append(Token(TT_ASSIGN, pos_start=self.pos))
-                self.advance()
             elif self.current_char == '(':
                 tokens.append(Token(TT_LPAREN, pos_start=self.pos))
                 self.advance()
             elif self.current_char == ')':
                 tokens.append(Token(TT_RPAREN, pos_start=self.pos))
+                self.advance()
+            elif self.current_char == '!':
+                tok, error = self.make_not_equals()
+                if error:
+                    return [], error
+                tokens.append(tok)
+                self.advance()
+            elif self.current_char == '=':
+                tokens.append(self.make_equals_or_assign())
+                self.advance()
+            elif self.current_char == '>':
+                tokens.append(self.make_equals_or_greater_than())
+                self.advance()
+            elif self.current_char == '<':
+                tokens.append(self.make_equals_or_less_than())
                 self.advance()
             else:
                 pos_start = self.pos.copy()
@@ -240,6 +259,52 @@ class Lexer:
 
         tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
         return Token(tok_type, id_str, pos_start, self.pos)
+
+    def make_not_equals(self):
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char == '=':
+            return Token(TT_NE, pos_start=pos_start, pos_end=self.pos), None
+        else:
+            self.pos.idx -= 1
+        return None, ExpectedCharError(pos_start, self.pos, "'=' after '!'")
+
+    def make_equals_or_assign(self):
+        tok_type = TT_ASSIGN
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char == '=':
+            tok_type = TT_EQ
+        else:
+            self.pos.idx -= 1
+
+        return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
+
+    def make_equals_or_greater_than(self):
+        tok_type = TT_GT
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char == '=':
+            tok_type = TT_GTE
+        else:
+            self.pos.idx -= 1
+
+        return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
+
+    def make_equals_or_less_than(self):
+        tok_type = TT_LT
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char == '=':
+            tok_type = TT_LTE
+        else:
+            self.pos.idx -= 1
+
+        return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
 
 #########################
@@ -378,7 +443,7 @@ class Parser:
 
         return res.failure(InvalidSyntaxError(
             self.current_tok.pos_start, self.current_tok.pos_end,
-            "Expected int, float, identifier, '+', '-' or ')'"
+            "Expected int, float, identifier, '+', '-' or '('"
         ))
 
     def power(self):
@@ -399,6 +464,32 @@ class Parser:
 
     def term(self):
         return self.bi_op(self.factor, (TT_MUL, TT_DIV))
+
+    def arith(self):
+        return self.bi_op(self.term, (TT_PLUS, TT_MINUS))
+
+    def cmp(self):
+        res = ParseResult()
+
+        if self.current_tok.matches(TT_KEYWORD, 'not'):
+            op_tok = self.current_tok
+            res.register_advancement()
+            self.advance()
+
+            node = res.register(self.cmp())
+            if res.error:
+                return res
+
+            return res.success(UnaryOpNode(op_tok, node))
+
+        node = res.register(self.bi_op(self.arith, (TT_EQ, TT_NE, TT_LT, TT_GT, TT_LTE, TT_GTE)))
+        if res.error:
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                "Expected int, float, identifier, '+', '-', '(' or 'not'"
+            ))
+
+        return res.success(node)
 
     def expr(self):
         res = ParseResult()
@@ -430,12 +521,12 @@ class Parser:
 
             return res.success(VarAssignNode(var_name, expr))
 
-        node = res.register(self.bi_op(self.term, (TT_PLUS, TT_MINUS)))
+        node = res.register(self.bi_op(self.cmp, ((TT_KEYWORD, 'and'), (TT_KEYWORD, 'or'))))
 
         if res.error:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                "Expected 'var', int, float, identifier, '+', '-' or '(' "
+                "Expected 'var', int, float, identifier, '+', '-', '(' or 'not'"
             ))
 
         return res.success(node)
@@ -448,7 +539,7 @@ class Parser:
         left_node = res.register(func_a())
         if res.error:
             return res
-        while self.current_tok.type in ops:
+        while self.current_tok.type in ops or (self.current_tok.type, self.current_tok.value) in ops:
             op_tok = self.current_tok
             res.register_advancement()
             self.advance()
@@ -525,6 +616,41 @@ class Number:
     def powed_to(self, other):
         if isinstance(other, Number):
             return Number(self.value ** other.value).set_context(self.context), None
+
+    def get_comparison_eq(self, other):
+        if isinstance(other, Number):
+            return Number(int(self.value == other.value)).set_context(self.context), None
+
+    def get_comparison_ne(self, other):
+        if isinstance(other, Number):
+            return Number(int(self.value != other.value)).set_context(self.context), None
+
+    def get_comparison_lt(self, other):
+        if isinstance(other, Number):
+            return Number(int(self.value < other.value)).set_context(self.context), None
+
+    def get_comparison_gt(self, other):
+        if isinstance(other, Number):
+            return Number(int(self.value > other.value)).set_context(self.context), None
+
+    def get_comparison_lte(self, other):
+        if isinstance(other, Number):
+            return Number(int(self.value <= other.value)).set_context(self.context), None
+
+    def get_comparison_gte(self, other):
+        if isinstance(other, Number):
+            return Number(int(self.value >= other.value)).set_context(self.context), None
+
+    def anded_with(self, other):
+        if isinstance(other, Number):
+            return Number(int(self.value and other.value)).set_context(self.context), None
+
+    def ored_with(self, other):
+        if isinstance(other, Number):
+            return Number(int(self.value or other.value)).set_context(self.context), None
+
+    def notted(self):
+        return Number(1 if self.value == 0 else 0).set_context(self.context), None
 
     def copy(self):
         copy = Number(self.value)
@@ -628,6 +754,22 @@ class Interpreter:
             result, error = left.dived_by(right)
         elif node.op_tok.type == TT_POW:
             result, error = left.powed_to(right)
+        elif node.op_tok.type == TT_EQ:
+            result, error = left.get_comparison_eq(right)
+        elif node.op_tok.type == TT_NE:
+            result, error = left.get_comparison_ne(right)
+        elif node.op_tok.type == TT_LT:
+            result, error = left.get_comparison_lt(right)
+        elif node.op_tok.type == TT_GT:
+            result, error = left.get_comparison_gt(right)
+        elif node.op_tok.type == TT_LTE:
+            result, error = left.get_comparison_lte(right)
+        elif node.op_tok.type == TT_GTE:
+            result, error = left.get_comparison_gte(right)
+        elif node.op_tok.matches(TT_KEYWORD, 'and'):
+            result, error = left.anded_with(right)
+        elif node.op_tok.matches(TT_KEYWORD, 'or'):
+            result, error = left.ored_with(right)
 
         if error:
             return res.failure(error)
@@ -644,6 +786,8 @@ class Interpreter:
 
         if node.op_tok.type == TT_MINUS:
             number, error = number.multed_to(Number(-1))
+        elif node.op_tok.matches(TT_KEYWORD, 'not'):
+            number, error = number.notted()
 
         if error:
             return res.failure(error)
@@ -657,6 +801,8 @@ class Interpreter:
 
 global_symbol_table = SymbolTable()
 global_symbol_table.set("null", Number(0))
+global_symbol_table.set("true", Number(1))
+global_symbol_table.set("false", Number(0))
 
 
 def run(fn, text):
