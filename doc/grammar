@@ -1,4 +1,4 @@
-expr   : KEYWORD:VAR IDENTIFIER EQUALS expr
+expr   : VAR IDENTIFIER ASSIGN expr
        : term ((PLUS|MINUS) term)*
 
 term   : factor ((MUL|DIV) factor)*      /* 乘除先于加减 */

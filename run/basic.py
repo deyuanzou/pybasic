@@ -100,13 +100,22 @@ TT_MINUS = 'MINUS'
 TT_MUL = 'MUL'
 TT_DIV = 'DIV'
 TT_POW = 'POW'
-TT_EQUALS = 'EQUALS'
+TT_ASSIGN = 'ASSIGN'
 TT_LPAREN = 'LPAREN'
 TT_RPAREN = 'RPAREN'
+# TT_EE = 'EE'
+# TT_NE = 'NE'
+# TT_LT = 'LT'
+# TT_GT = 'GT'
+# TT_LTE = 'LTE'
+# TT_GTE = 'GTE'
 TT_EOF = 'EOF'
 
 KEYWORDS = [
-    'VAR'
+    'var',
+    # 'and',
+    # 'or',
+    # 'not'
 ]
 
 
@@ -175,7 +184,7 @@ class Lexer:
                 tokens.append(Token(TT_POW, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '=':
-                tokens.append(Token(TT_EQUALS, pos_start=self.pos))
+                tokens.append(Token(TT_ASSIGN, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '(':
                 tokens.append(Token(TT_LPAREN, pos_start=self.pos))
@@ -394,7 +403,7 @@ class Parser:
     def expr(self):
         res = ParseResult()
 
-        if self.current_tok.matches(TT_KEYWORD, 'VAR'):
+        if self.current_tok.matches(TT_KEYWORD, 'var'):
             res.register_advancement()
             self.advance()
             if self.current_tok.type != TT_IDENTIFIER:
@@ -407,7 +416,7 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-            if self.current_tok.type != TT_EQUALS:
+            if self.current_tok.type != TT_ASSIGN:
                 return res.failure(InvalidSyntaxError(
                     self.current_tok.pos_start, self.current_tok.pos_end,
                     "Expected '='"
@@ -426,7 +435,7 @@ class Parser:
         if res.error:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                "Expected 'VAR', int, float, identifier, '+', '-' or '(' "
+                "Expected 'var', int, float, identifier, '+', '-' or '(' "
             ))
 
         return res.success(node)
