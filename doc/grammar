@@ -1,3 +1,5 @@
+stms   : NEWLINE* expr (NEWLINE+ expr)* NEWLINE*
+
 expr   : VAR IDENTIFIER ASSIGN expr
        : cmp ((AND|OR) cmp)*
        : arith
