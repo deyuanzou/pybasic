@@ -17,7 +17,14 @@ power  : atom (POW factor)*
 atom   : INT|FLOAT|IDENTIFIER
        : LPAREN expr RPAREN
        : cdt
+       : flp
+       : dlp
 
 cdt    : IF expr THEN expr
          (ELIF expr THEN expr)*
          (ELSE expr)?
+
+flp  : FOR IDENTIFIER ASSIGN expr TO expr
+       (STEP expr)? THEN expr
+
+dlp  : WHILE expr THEN expr
