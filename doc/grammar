@@ -18,10 +18,13 @@ call   : atom (LPAREN  (expr (COMMA expr)*)? RPAREN)?
 
 atom   : INT|FLOAT|STRING|IDENTIFIER
        : LPAREN expr RPAREN
+       : lst
        : cdt
        : flp
        : dlp
        : fun
+
+lst    : LSQUARE (expr (COMMA expr)*)? RSQUARE
 
 cdt    : IF expr THEN expr
          (ELIF expr THEN expr)*
