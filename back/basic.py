@@ -272,15 +272,27 @@ class Lexer:
 
     def make_string(self):
         string = ''
-        pos_start = self.pos
+        pos_start = self.pos.copy()
+        escape_character = False
         self.advance()
 
-        while self.current_char != '"':
-            string += self.current_char
+        escape_characters = {
+            'n': '\n',
+            't': '\t'
+        }
+
+        while self.current_char is not None and (self.current_char != '"' or escape_character):
+            if escape_character:
+                string += escape_characters.get(self.current_char, self.current_char)
+            else:
+                if self.current_char == '\\':
+                    escape_character = True
+                else:
+                    string += self.current_char
             self.advance()
+            escape_character = False
 
         self.advance()
-
         return Token(TT_STRING, string, pos_start, self.pos)
 
     def make_identifier(self):
@@ -560,7 +572,6 @@ class ParseResult:
 
 class Parser:
     def __init__(self, tokens):
-        self.current_tok = None
         self.tokens = tokens
         self.tok_idx = -1
         self.advance()
@@ -576,7 +587,7 @@ class Parser:
         return self.current_tok
 
     def update_current_tok(self):
-        if 0 <= self.tok_idx < len(self.tokens):
+        if self.tok_idx >= 0 and self.tok_idx < len(self.tokens):
             self.current_tok = self.tokens[self.tok_idx]
 
     def parse(self):
@@ -600,8 +611,7 @@ class Parser:
             self.advance()
 
         statement = res.register(self.statement())
-        if res.error:
-            return res
+        if res.error: return res
         statements.append(statement)
 
         more_statements = True
@@ -2234,13 +2244,13 @@ def run(fn, text):
     if error:
         return None, error
 
-    # 生成抽象语法树
+    # Generate AST
     parser = Parser(tokens)
     ast = parser.parse()
     if ast.error:
         return None, ast.error
 
-    # 运行程序
+    # Run program
     interpreter = Interpreter()
     context = Context('<program>')
     context.symbol_table = global_symbol_table
