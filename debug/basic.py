@@ -1983,7 +1983,7 @@ BuiltInFunction.append = BuiltInFunction("append")
 BuiltInFunction.pop = BuiltInFunction("pop")
 BuiltInFunction.extend = BuiltInFunction("extend")
 BuiltInFunction.len = BuiltInFunction("len")
-BuiltInFunction.run = BuiltInFunction("debug")
+BuiltInFunction.run = BuiltInFunction("run")
 
 
 #######################################
@@ -2036,20 +2036,30 @@ class Interpreter:
     ###################################
 
     def visit_NumberNode(self, node, context):
+
+        print('visit_NumberNode')
+
         return RTResult().success(
             Number(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
         )
 
     def visit_StringNode(self, node, context):
+
+        print("visit_StringNode")
+
         return RTResult().success(
             String(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
         )
 
     def visit_ListNode(self, node, context):
+
+        print("visit_ListNode")
+
         res = RTResult()
         elements = []
 
         for element_node in node.element_nodes:
+
             elements.append(res.register(self.visit(element_node, context)))
             if res.should_return(): return res
 
@@ -2058,6 +2068,9 @@ class Interpreter:
         )
 
     def visit_VarAccessNode(self, node, context):
+
+        print("visit_VarAccessNode")
+
         res = RTResult()
         var_name = node.var_name_tok.value
         value = context.symbol_table.get(var_name)
@@ -2073,6 +2086,9 @@ class Interpreter:
         return res.success(value)
 
     def visit_VarAssignNode(self, node, context):
+
+        print("visit_VarAssignNode")
+
         res = RTResult()
         var_name = node.var_name_tok.value
         value = res.register(self.visit(node.value_node, context))
@@ -2082,6 +2098,9 @@ class Interpreter:
         return res.success(value)
 
     def visit_BinOpNode(self, node, context):
+
+        print("visit_BinOpNode")
+
         res = RTResult()
         left = res.register(self.visit(node.left_node, context))
         if res.should_return(): return res
@@ -2121,6 +2140,9 @@ class Interpreter:
             return res.success(result.set_pos(node.pos_start, node.pos_end))
 
     def visit_UnaryOpNode(self, node, context):
+
+        print("visit_UnaryOpNode")
+
         res = RTResult()
         number = res.register(self.visit(node.node, context))
         if res.should_return(): return res
@@ -2138,6 +2160,9 @@ class Interpreter:
             return res.success(number.set_pos(node.pos_start, node.pos_end))
 
     def visit_IfNode(self, node, context):
+
+        print("visit_IfNode")
+
         res = RTResult()
 
         for condition, expr, should_return_null in node.cases:
@@ -2158,6 +2183,9 @@ class Interpreter:
         return res.success(Number.null)
 
     def visit_ForNode(self, node, context):
+
+        print("visit_ForNode")
+
         res = RTResult()
         elements = []
 
@@ -2201,6 +2229,9 @@ class Interpreter:
         )
 
     def visit_WhileNode(self, node, context):
+
+        print("visit_WhileNode")
+
         res = RTResult()
         elements = []
 
@@ -2228,6 +2259,9 @@ class Interpreter:
         )
 
     def visit_FuncDefNode(self, node, context):
+
+        print("visit_FuncDefNode")
+
         res = RTResult()
 
         func_name = node.var_name_tok.value if node.var_name_tok else None
@@ -2242,6 +2276,9 @@ class Interpreter:
         return res.success(func_value)
 
     def visit_CallNode(self, node, context):
+
+        print("visit_CallNode")
+
         res = RTResult()
         args = []
 
@@ -2259,6 +2296,9 @@ class Interpreter:
         return res.success(return_value)
 
     def visit_ReturnNode(self, node, context):
+
+        print("visit_ReturnNode")
+
         res = RTResult()
 
         if node.node_to_return:
@@ -2270,9 +2310,15 @@ class Interpreter:
         return res.success_return(value)
 
     def visit_ContinueNode(self, node, context):
+
+        print("visit_ContinueNode")
+
         return RTResult().success_continue()
 
     def visit_BreakNode(self, node, context):
+
+        print("visit_BreakNode")
+
         return RTResult().success_break()
 
 
@@ -2298,7 +2344,7 @@ global_symbol_table.set("append", BuiltInFunction.append)
 global_symbol_table.set("pop", BuiltInFunction.pop)
 global_symbol_table.set("extend", BuiltInFunction.extend)
 global_symbol_table.set("len", BuiltInFunction.len)
-global_symbol_table.set("debug", BuiltInFunction.run)
+global_symbol_table.set("run", BuiltInFunction.run)
 
 
 def run(fn, text):
