@@ -272,27 +272,15 @@ class Lexer:
 
     def make_string(self):
         string = ''
-        pos_start = self.pos.copy()
-        escape_character = False
+        pos_start = self.pos
         self.advance()
 
-        escape_characters = {
-            'n': '\n',
-            't': '\t'
-        }
-
-        while self.current_char is not None and (self.current_char != '"' or escape_character):
-            if escape_character:
-                string += escape_characters.get(self.current_char, self.current_char)
-            else:
-                if self.current_char == '\\':
-                    escape_character = True
-                else:
-                    string += self.current_char
+        while self.current_char != '"':
+            string += self.current_char
             self.advance()
-            escape_character = False
 
         self.advance()
+
         return Token(TT_STRING, string, pos_start, self.pos)
 
     def make_identifier(self):
@@ -1728,7 +1716,9 @@ class BuiltInFunction(BaseFunction):
     #####################################
 
     def execute_print(self, exec_ctx):
-        print(str(exec_ctx.symbol_table.get('value')))
+        s = str(exec_ctx.symbol_table.get('value'))
+        decoded_s = s.encode().decode('unicode-escape')
+        print(decoded_s)
         return RTResult().success(Number.null)
 
     execute_print.arg_names = ['value']
