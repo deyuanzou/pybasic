@@ -1697,6 +1697,8 @@ class BaseFunction(Value):
     def check_args(self, arg_names, args):
         res = RTResult()
 
+        print(len(args), len(arg_names))
+
         if len(args) > len(arg_names):
             return res.failure(RTError(
                 self.pos_start, self.pos_end,
@@ -1714,10 +1716,12 @@ class BaseFunction(Value):
         return res.success(None)
 
     def populate_args(self, arg_names, args, exec_ctx):
+
         for i in range(len(args)):
             arg_name = arg_names[i]
             arg_value = args[i]
             arg_value.set_context(exec_ctx)
+            print(arg_name, arg_value)
             exec_ctx.symbol_table.set(arg_name, arg_value)
 
     def check_and_populate_args(self, arg_names, args, exec_ctx):
@@ -1770,6 +1774,10 @@ class BuiltInFunction(BaseFunction):
         method_name = f'execute_{self.name}'
         method = getattr(self, method_name, self.no_visit_method)
 
+        print(method_name)
+
+        print(method.arg_names, args)
+
         res.register(self.check_and_populate_args(method.arg_names, args, exec_ctx))
         if res.should_return(): return res
 
@@ -1792,7 +1800,9 @@ class BuiltInFunction(BaseFunction):
     #####################################
 
     def execute_print(self, exec_ctx):
-        print(str(exec_ctx.symbol_table.get('value')))
+        s = str(exec_ctx.symbol_table.get('value'))
+        decoded_s = s.encode().decode('unicode-escape')
+        print(decoded_s)
         return RTResult().success(Number.null)
 
     execute_print.arg_names = ['value']
@@ -2045,7 +2055,9 @@ class Interpreter:
 
     def visit_StringNode(self, node, context):
 
-        print("visit_StringNode")
+        print("visit_StringNode", end=' ')
+        print('value->', end='')
+        print(node.tok.value)
 
         return RTResult().success(
             String(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
@@ -2069,11 +2081,17 @@ class Interpreter:
 
     def visit_VarAccessNode(self, node, context):
 
-        print("visit_VarAccessNode")
+        print("visit_VarAccessNode", end=' ')
+        print('var->', end='')
 
         res = RTResult()
+
         var_name = node.var_name_tok.value
+        print(var_name, end=' ')
+
         value = context.symbol_table.get(var_name)
+        print('value->', end='')
+        print(value)
 
         if not value:
             return res.failure(RTError(
@@ -2283,12 +2301,15 @@ class Interpreter:
         args = []
 
         value_to_call = res.register(self.visit(node.node_to_call, context))
+
         if res.should_return(): return res
         value_to_call = value_to_call.copy().set_pos(node.pos_start, node.pos_end)
 
         for arg_node in node.arg_nodes:
             args.append(res.register(self.visit(arg_node, context)))
             if res.should_return(): return res
+
+        print(args)
 
         return_value = res.register(value_to_call.execute(args))
         if res.should_return(): return res
