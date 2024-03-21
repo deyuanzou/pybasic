@@ -184,6 +184,9 @@ class Lexer:
         self.current_char = None
         self.advance()
 
+        print()
+        print(self.fn, self.text)
+
     def advance(self):
         self.pos.advance(self.current_char)
         self.current_char = self.text[self.pos.idx] if self.pos.idx < len(self.text) else None
@@ -251,6 +254,12 @@ class Lexer:
                 return [], IllegalCharError(pos_start, self.pos, "'" + char + "'")
 
         tokens.append(Token(TT_EOF, pos_start=self.pos))
+
+        for token in tokens:
+            print(token, end=' ')
+
+        print()
+
         return tokens, None
 
     def make_number(self):
@@ -272,34 +281,22 @@ class Lexer:
 
     def make_string(self):
         string = ''
-        pos_start = self.pos.copy()
-        escape_character = False
+        pos_start = self.pos
         self.advance()
 
-        escape_characters = {
-            'n': '\n',
-            't': '\t'
-        }
-
-        while self.current_char is not None and (self.current_char != '"' or escape_character):
-            if escape_character:
-                string += escape_characters.get(self.current_char, self.current_char)
-            else:
-                if self.current_char == '\\':
-                    escape_character = True
-                else:
-                    string += self.current_char
+        while self.current_char != '"':
+            string += self.current_char
             self.advance()
-            escape_character = False
 
         self.advance()
+
         return Token(TT_STRING, string, pos_start, self.pos)
 
     def make_identifier(self):
         id_str = ''
         pos_start = self.pos.copy()
 
-        while self.current_char != None and self.current_char in LETTERS_DIGITS + '_':
+        while self.current_char is not None and self.current_char in LETTERS_DIGITS + '_':
             id_str += self.current_char
             self.advance()
 
@@ -572,6 +569,7 @@ class ParseResult:
 
 class Parser:
     def __init__(self, tokens):
+        self.current_tok = None
         self.tokens = tokens
         self.tok_idx = -1
         self.advance()
@@ -587,7 +585,7 @@ class Parser:
         return self.current_tok
 
     def update_current_tok(self):
-        if self.tok_idx >= 0 and self.tok_idx < len(self.tokens):
+        if 0 <= self.tok_idx < len(self.tokens):
             self.current_tok = self.tokens[self.tok_idx]
 
     def parse(self):
@@ -597,6 +595,7 @@ class Parser:
                 self.current_tok.pos_start, self.current_tok.pos_end,
                 "Token cannot appear after previous tokens"
             ))
+
         return res
 
     ###################################
@@ -611,7 +610,8 @@ class Parser:
             self.advance()
 
         statement = res.register(self.statement())
-        if res.error: return res
+        if res.error:
+            return res
         statements.append(statement)
 
         more_statements = True
@@ -633,6 +633,8 @@ class Parser:
                 continue
             statements.append(statement)
 
+        print("ListNode")
+
         return res.success(ListNode(
             statements,
             pos_start,
@@ -650,16 +652,25 @@ class Parser:
             expr = res.try_register(self.expr())
             if not expr:
                 self.reverse(res.to_reverse_count)
+
+            print("ReturnNode")
+
             return res.success(ReturnNode(expr, pos_start, self.current_tok.pos_start.copy()))
 
         if self.current_tok.matches(TT_KEYWORD, 'continue'):
             res.register_advancement()
             self.advance()
+
+            print("ContinueNode")
+
             return res.success(ContinueNode(pos_start, self.current_tok.pos_start.copy()))
 
         if self.current_tok.matches(TT_KEYWORD, 'break'):
             res.register_advancement()
             self.advance()
+
+            print("BreakNode")
+
             return res.success(BreakNode(pos_start, self.current_tok.pos_start.copy()))
 
         expr = res.register(self.expr())
@@ -669,6 +680,7 @@ class Parser:
                 "Expected 'return', 'continue', 'break', 'var', 'if', 'for', 'while', 'fun', int, float, identifier, "
                 "'+', '-', '(', '[' or 'not'"
             ))
+
         return res.success(expr)
 
     def expr(self):
@@ -698,6 +710,9 @@ class Parser:
             self.advance()
             expr = res.register(self.expr())
             if res.error: return res
+
+            print("VarAssignNode")
+
             return res.success(VarAssignNode(var_name, expr))
 
         node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD, 'and'), (TT_KEYWORD, 'or'))))
@@ -720,6 +735,9 @@ class Parser:
 
             node = res.register(self.comp_expr())
             if res.error: return res
+
+            print("UnaryOpNode")
+
             return res.success(UnaryOpNode(op_tok, node))
 
         node = res.register(self.bin_op(self.arith_expr, (TT_EE, TT_NE, TT_LT, TT_GT, TT_LTE, TT_GTE)))
@@ -747,6 +765,9 @@ class Parser:
             self.advance()
             factor = res.register(self.factor())
             if res.error: return res
+
+            print("UnaryOpNode")
+
             return res.success(UnaryOpNode(tok, factor))
 
         return self.power()
@@ -791,7 +812,15 @@ class Parser:
 
                 res.register_advancement()
                 self.advance()
+
+            print("CallNode", end=' ')
+            print("args->", end='')
+            for arg in arg_nodes:
+                print(arg, end=' ')
+            print()
+
             return res.success(CallNode(atom, arg_nodes))
+
         return res.success(atom)
 
     def atom(self):
@@ -801,16 +830,27 @@ class Parser:
         if tok.type in (TT_INT, TT_FLOAT):
             res.register_advancement()
             self.advance()
+
+            print("NumberNode")
+
             return res.success(NumberNode(tok))
 
         elif tok.type == TT_STRING:
             res.register_advancement()
             self.advance()
+
+            print("StringNode")
+
             return res.success(StringNode(tok))
 
         elif tok.type == TT_IDENTIFIER:
             res.register_advancement()
             self.advance()
+
+            print("VarAccessNode", end=' ')
+            print("var->", end='')
+            print(tok)
+
             return res.success(VarAccessNode(tok))
 
         elif tok.type == TT_LPAREN:
@@ -821,6 +861,7 @@ class Parser:
             if self.current_tok.type == TT_RPAREN:
                 res.register_advancement()
                 self.advance()
+
                 return res.success(expr)
             else:
                 return res.failure(InvalidSyntaxError(
@@ -831,26 +872,31 @@ class Parser:
         elif tok.type == TT_LSQUARE:
             list_expr = res.register(self.list_expr())
             if res.error: return res
+
             return res.success(list_expr)
 
         elif tok.matches(TT_KEYWORD, 'if'):
             if_expr = res.register(self.if_expr())
             if res.error: return res
+
             return res.success(if_expr)
 
         elif tok.matches(TT_KEYWORD, 'for'):
             for_expr = res.register(self.for_expr())
             if res.error: return res
+
             return res.success(for_expr)
 
         elif tok.matches(TT_KEYWORD, 'while'):
             while_expr = res.register(self.while_expr())
             if res.error: return res
+
             return res.success(while_expr)
 
         elif tok.matches(TT_KEYWORD, 'fun'):
             func_def = res.register(self.func_def())
             if res.error: return res
+
             return res.success(func_def)
 
         return res.failure(InvalidSyntaxError(
@@ -880,7 +926,8 @@ class Parser:
             if res.error:
                 return res.failure(InvalidSyntaxError(
                     self.current_tok.pos_start, self.current_tok.pos_end,
-                    "Expected ']', 'var', 'if', 'for', 'while', 'fun', int, float, identifier, '+', '-', '(', '[' or 'not'"
+                    "Expected ']', 'var', 'if', 'for', 'while', 'fun', int, float, identifier, '+', '-', '(', "
+                    "'[' or 'not'"
                 ))
 
             while self.current_tok.type == TT_COMMA:
@@ -899,6 +946,8 @@ class Parser:
             res.register_advancement()
             self.advance()
 
+        print("ListNode")
+
         return res.success(ListNode(
             element_nodes,
             pos_start,
@@ -910,6 +959,9 @@ class Parser:
         all_cases = res.register(self.if_expr_cases('if'))
         if res.error: return res
         cases, else_case = all_cases
+
+        print("IfNode")
+
         return res.success(IfNode(cases, else_case))
 
     def if_expr_b(self):
@@ -1094,10 +1146,14 @@ class Parser:
             res.register_advancement()
             self.advance()
 
+            print("ForNode")
+
             return res.success(ForNode(var_name, start_value, end_value, step_value, body, True))
 
         body = res.register(self.statement())
         if res.error: return res
+
+        print("ForNode")
 
         return res.success(ForNode(var_name, start_value, end_value, step_value, body, False))
 
@@ -1141,10 +1197,14 @@ class Parser:
             res.register_advancement()
             self.advance()
 
+            print("WhileNode")
+
             return res.success(WhileNode(condition, body, True))
 
         body = res.register(self.statement())
         if res.error: return res
+
+        print("WhileNode")
 
         return res.success(WhileNode(condition, body, False))
 
@@ -1222,6 +1282,8 @@ class Parser:
             body = res.register(self.expr())
             if res.error: return res
 
+            print("FuncDefNode")
+
             return res.success(FuncDefNode(
                 var_name_tok,
                 arg_name_toks,
@@ -1249,6 +1311,8 @@ class Parser:
 
         res.register_advancement()
         self.advance()
+
+        print("FuncDefNode")
 
         return res.success(FuncDefNode(
             var_name_tok,
@@ -1757,7 +1821,7 @@ class BuiltInFunction(BaseFunction):
     execute_input_int.arg_names = []
 
     def execute_clear(self, exec_ctx):
-        os.system('cls' if os.name == 'nt' else 'cls')
+        os.system('cls' if os.name == 'nt' else 'clear')
         return RTResult().success(Number.null)
 
     execute_clear.arg_names = []
@@ -1919,7 +1983,7 @@ BuiltInFunction.append = BuiltInFunction("append")
 BuiltInFunction.pop = BuiltInFunction("pop")
 BuiltInFunction.extend = BuiltInFunction("extend")
 BuiltInFunction.len = BuiltInFunction("len")
-BuiltInFunction.run = BuiltInFunction("run")
+BuiltInFunction.run = BuiltInFunction("debug")
 
 
 #######################################
@@ -2234,7 +2298,7 @@ global_symbol_table.set("append", BuiltInFunction.append)
 global_symbol_table.set("pop", BuiltInFunction.pop)
 global_symbol_table.set("extend", BuiltInFunction.extend)
 global_symbol_table.set("len", BuiltInFunction.len)
-global_symbol_table.set("run", BuiltInFunction.run)
+global_symbol_table.set("debug", BuiltInFunction.run)
 
 
 def run(fn, text):
@@ -2244,13 +2308,13 @@ def run(fn, text):
     if error:
         return None, error
 
-    # Generate AST
+    # 生成抽象语法树
     parser = Parser(tokens)
     ast = parser.parse()
     if ast.error:
         return None, ast.error
 
-    # Run program
+    # 运行程序
     interpreter = Interpreter()
     context = Context('<program>')
     context.symbol_table = global_symbol_table
