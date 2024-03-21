@@ -1341,7 +1341,7 @@ class Value:
         self.context = context
         return self
 
-    def added_to(self, other):
+    def added_by(self, other):
         return None, self.illegal_operation(other)
 
     def subbed_by(self, other):
@@ -1406,7 +1406,7 @@ class Number(Value):
         super().__init__()
         self.value = value
 
-    def added_to(self, other):
+    def added_by(self, other):
         if isinstance(other, Number):
             return Number(self.value + other.value).set_context(self.context), None
         else:
@@ -1521,7 +1521,7 @@ class String(Value):
         super().__init__()
         self.value = value
 
-    def added_to(self, other):
+    def added_by(self, other):
         if isinstance(other, String):
             return String(self.value + other.value).set_context(self.context), None
         else:
@@ -1554,7 +1554,7 @@ class List(Value):
         super().__init__()
         self.elements = elements
 
-    def added_to(self, other):
+    def added_by(self, other):
         new_list = self.copy()
         new_list.elements.append(other)
         return new_list, None
@@ -2015,7 +2015,7 @@ class Interpreter:
         if res.should_return(): return res
 
         if node.op_tok.type == TT_PLUS:
-            result, error = left.added_to(right)
+            result, error = left.added_by(right)
         elif node.op_tok.type == TT_MINUS:
             result, error = left.subbed_by(right)
         elif node.op_tok.type == TT_MUL:
@@ -2234,13 +2234,13 @@ def run(fn, text):
     if error:
         return None, error
 
-    # Generate AST
+    # 生成抽象语法树
     parser = Parser(tokens)
     ast = parser.parse()
     if ast.error:
         return None, ast.error
 
-    # Run program
+    # 运行程序
     interpreter = Interpreter()
     context = Context('<program>')
     context.symbol_table = global_symbol_table

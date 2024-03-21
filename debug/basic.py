@@ -185,7 +185,7 @@ class Lexer:
         self.advance()
 
         print()
-        print(self.fn, self.text)
+        print(self.fn)
 
     def advance(self):
         self.pos.advance(self.current_char)
@@ -1417,7 +1417,7 @@ class Value:
         self.context = context
         return self
 
-    def added_to(self, other):
+    def added_by(self, other):
         return None, self.illegal_operation(other)
 
     def subbed_by(self, other):
@@ -1482,7 +1482,7 @@ class Number(Value):
         super().__init__()
         self.value = value
 
-    def added_to(self, other):
+    def added_by(self, other):
         if isinstance(other, Number):
             return Number(self.value + other.value).set_context(self.context), None
         else:
@@ -1597,7 +1597,7 @@ class String(Value):
         super().__init__()
         self.value = value
 
-    def added_to(self, other):
+    def added_by(self, other):
         if isinstance(other, String):
             return String(self.value + other.value).set_context(self.context), None
         else:
@@ -1630,7 +1630,7 @@ class List(Value):
         super().__init__()
         self.elements = elements
 
-    def added_to(self, other):
+    def added_by(self, other):
         new_list = self.copy()
         new_list.elements.append(other)
         return new_list, None
@@ -1748,7 +1748,7 @@ class Function(BaseFunction):
         if res.should_return(): return res
 
         value = res.register(interpreter.visit(self.body_node, exec_ctx))
-        if res.should_return() and res.func_return_value == None: return res
+        if res.should_return() and res.func_return_value is None: return res
 
         ret_value = (value if self.should_auto_return else None) or res.func_return_value or Number.null
         return res.success(ret_value)
@@ -1774,7 +1774,7 @@ class BuiltInFunction(BaseFunction):
         method_name = f'execute_{self.name}'
         method = getattr(self, method_name, self.no_visit_method)
 
-        print(method_name)
+        # print(method_name)
 
         print(method.arg_names, args)
 
@@ -2087,6 +2087,7 @@ class Interpreter:
         res = RTResult()
 
         var_name = node.var_name_tok.value
+        # print(type(var_name), end=' ')
         print(var_name, end=' ')
 
         value = context.symbol_table.get(var_name)
@@ -2126,7 +2127,7 @@ class Interpreter:
         if res.should_return(): return res
 
         if node.op_tok.type == TT_PLUS:
-            result, error = left.added_to(right)
+            result, error = left.added_by(right)
         elif node.op_tok.type == TT_MINUS:
             result, error = left.subbed_by(right)
         elif node.op_tok.type == TT_MUL:
@@ -2347,6 +2348,7 @@ class Interpreter:
 # Run 程序入口
 #######################################
 
+# 设置全局变量
 global_symbol_table = SymbolTable()
 global_symbol_table.set("null", Number.null)
 global_symbol_table.set("false", Number.false)
