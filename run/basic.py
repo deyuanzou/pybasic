@@ -114,7 +114,7 @@ TT_MINUS = 'MINUS'
 TT_MUL = 'MUL'
 TT_DIV = 'DIV'
 TT_POW = 'POW'
-TT_EQ = 'EQ'
+TT_ASSIGN = 'ASSIGN'
 TT_LPAREN = 'LPAREN'
 TT_RPAREN = 'RPAREN'
 TT_LSQUARE = 'LSQUARE'
@@ -317,7 +317,7 @@ class Lexer:
         return None, ExpectedCharError(pos_start, self.pos, "'=' (after '!')")
 
     def make_equals(self):
-        tok_type = TT_EQ
+        tok_type = TT_ASSIGN
         pos_start = self.pos.copy()
         self.advance()
 
@@ -676,7 +676,7 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-            if self.current_tok.type != TT_EQ:
+            if self.current_tok.type != TT_ASSIGN:
                 return res.failure(InvalidSyntaxError(
                     self.current_tok.pos_start, self.current_tok.pos_end,
                     "Expected '='"
@@ -1024,7 +1024,7 @@ class Parser:
         res.register_advancement()
         self.advance()
 
-        if self.current_tok.type != TT_EQ:
+        if self.current_tok.type != TT_ASSIGN:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
                 f"Expected '='"
