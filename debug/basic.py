@@ -119,7 +119,7 @@ TT_LPAREN = 'LPAREN'
 TT_RPAREN = 'RPAREN'
 TT_LSQUARE = 'LSQUARE'
 TT_RSQUARE = 'RSQUARE'
-TT_EE = 'EE'
+TT_EQ = 'EQ'
 TT_NE = 'NE'
 TT_LT = 'LT'
 TT_GT = 'GT'
@@ -239,7 +239,7 @@ class Lexer:
                 if error: return [], error
                 tokens.append(token)
             elif self.current_char == '=':
-                tokens.append(self.make_equals())
+                tokens.append(self.make_equals_or_assign())
             elif self.current_char == '<':
                 tokens.append(self.make_less_than())
             elif self.current_char == '>':
@@ -325,14 +325,14 @@ class Lexer:
         self.advance()
         return None, ExpectedCharError(pos_start, self.pos, "'=' (after '!')")
 
-    def make_equals(self):
+    def make_equals_or_assign(self):
         tok_type = TT_ASSIGN
         pos_start = self.pos.copy()
         self.advance()
 
         if self.current_char == '=':
             self.advance()
-            tok_type = TT_EE
+            tok_type = TT_EQ
 
         return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
@@ -740,7 +740,7 @@ class Parser:
 
             return res.success(UnaryOpNode(op_tok, node))
 
-        node = res.register(self.bin_op(self.arith_expr, (TT_EE, TT_NE, TT_LT, TT_GT, TT_LTE, TT_GTE)))
+        node = res.register(self.bin_op(self.arith_expr, (TT_EQ, TT_NE, TT_LT, TT_GT, TT_LTE, TT_GTE)))
 
         if res.error:
             return res.failure(InvalidSyntaxError(
@@ -2136,7 +2136,7 @@ class Interpreter:
             result, error = left.dived_by(right)
         elif node.op_tok.type == TT_POW:
             result, error = left.powed_by(right)
-        elif node.op_tok.type == TT_EE:
+        elif node.op_tok.type == TT_EQ:
             result, error = left.get_comparison_eq(right)
         elif node.op_tok.type == TT_NE:
             result, error = left.get_comparison_ne(right)
