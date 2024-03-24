@@ -1,10 +1,12 @@
-var a = 18
+# calculate the sum of 1+2+3+...+10
 
-if a>=18 then 1 else 0
+var sum = 0
 
-# while和for写成多行时需要end
-while a >= 0 then
-    var a = a - 1
+var i = 10
+
+while i > 0 then
+    var sum = sum + i
+    var i = i - 1
 end
 
-print(a)
+print(sum)

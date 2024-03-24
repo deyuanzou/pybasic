@@ -2223,9 +2223,11 @@ class Interpreter:
         i = start_value.value
 
         if step_value.value >= 0:
-            condition = lambda: i < end_value.value
+            condition = lambda: i <= end_value.value
         else:
             condition = lambda: i > end_value.value
+
+        # value = 0
 
         while condition():
             context.symbol_table.set(node.var_name_tok.value, Number(i))
@@ -2242,6 +2244,8 @@ class Interpreter:
 
             elements.append(value)
 
+        # elements.append(value)
+
         return res.success(
             Number.null if node.should_return_null else
             List(elements).set_context(context).set_pos(node.pos_start, node.pos_end)
@@ -2253,6 +2257,8 @@ class Interpreter:
 
         res = RTResult()
         elements = []
+
+        # value = 0
 
         while True:
             condition = res.register(self.visit(node.condition_node, context))
@@ -2271,6 +2277,8 @@ class Interpreter:
                 break
 
             elements.append(value)
+
+        # elements.append(value)
 
         return res.success(
             Number.null if node.should_return_null else

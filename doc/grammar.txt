@@ -5,7 +5,7 @@ statement	: KEYWORD:RETURN expr?
 			: KEYWORD:BREAK
 			: expr
 
-expr        : KEYWORD:VAR IDENTIFIER EQ expr
+expr        : KEYWORD:VAR IDENTIFIER ASSIGN expr
             : comp-expr ((KEYWORD:AND|KEYWORD:OR) comp-expr)*
 
 comp-expr   : NOT comp-expr
