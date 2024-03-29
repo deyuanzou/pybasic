@@ -9,4 +9,5 @@ while i > 0 then
     var i = i - 1
 end
 
+print("the sum of 1+2+3+...+10 is: ")
 print(sum)
