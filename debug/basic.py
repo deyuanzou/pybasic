@@ -1624,6 +1624,8 @@ class String(Value):
     def __repr__(self):
         return f'"{self.value}"'
 
+String.none = String("")
+
 
 class List(Value):
     def __init__(self, elements):
@@ -1803,7 +1805,7 @@ class BuiltInFunction(BaseFunction):
         s = str(exec_ctx.symbol_table.get('value'))
         decoded_s = s.encode().decode('unicode-escape')
         print(decoded_s)
-        return RTResult().success(Number.null)
+        return RTResult().success(String.none)
 
     execute_print.arg_names = ['value']
 
@@ -2362,6 +2364,7 @@ global_symbol_table.set("null", Number.null)
 global_symbol_table.set("false", Number.false)
 global_symbol_table.set("true", Number.true)
 global_symbol_table.set("pi", Number.pi)
+global_symbol_table.set("none", String.none)
 global_symbol_table.set("print", BuiltInFunction.print)
 global_symbol_table.set("print_ret", BuiltInFunction.print_ret)
 global_symbol_table.set("input", BuiltInFunction.input)
