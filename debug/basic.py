@@ -1832,6 +1832,18 @@ class BuiltInFunction(BaseFunction):
 
     execute_input_int.arg_names = []
 
+    def execute_input_float(self, exec_ctx):
+        while True:
+            text = input()
+            try:
+                number = float(text)
+                break
+            except ValueError:
+                print(f"'{text}' must be a float. Try again!")
+        return RTResult().success(Number(number))
+
+    execute_input_float.arg_names = []
+
     def execute_clear(self, exec_ctx):
         os.system('cls' if os.name == 'nt' else 'clear')
         return RTResult().success(String.none)
@@ -1986,6 +1998,7 @@ BuiltInFunction.print = BuiltInFunction("print")
 BuiltInFunction.print_ret = BuiltInFunction("print_ret")
 BuiltInFunction.input = BuiltInFunction("input")
 BuiltInFunction.input_int = BuiltInFunction("input_int")
+BuiltInFunction.input_float = BuiltInFunction("input_float")
 BuiltInFunction.clear = BuiltInFunction("clear")
 BuiltInFunction.is_number = BuiltInFunction("is_number")
 BuiltInFunction.is_string = BuiltInFunction("is_string")
@@ -2369,6 +2382,7 @@ global_symbol_table.set("print", BuiltInFunction.print)
 global_symbol_table.set("print_ret", BuiltInFunction.print_ret)
 global_symbol_table.set("input", BuiltInFunction.input)
 global_symbol_table.set("input_int", BuiltInFunction.input_int)
+global_symbol_table.set("input_float", BuiltInFunction.input_float)
 global_symbol_table.set("clear", BuiltInFunction.clear)
 global_symbol_table.set("is_num", BuiltInFunction.is_number)
 global_symbol_table.set("is_str", BuiltInFunction.is_string)
