@@ -1750,7 +1750,7 @@ class BuiltInFunction(BaseFunction):
 
     def execute_clear(self, exec_ctx):
         os.system('cls' if os.name == 'nt' else 'cls')
-        return RTResult().success(Number.null)
+        return RTResult().success(String.none)
 
     execute_clear.arg_names = []
 
@@ -1790,7 +1790,7 @@ class BuiltInFunction(BaseFunction):
             ))
 
         list_.elements.append(value)
-        return RTResult().success(Number.null)
+        return RTResult().success(String.none)
 
     execute_append.arg_names = ["list", "value"]
 
@@ -1843,7 +1843,7 @@ class BuiltInFunction(BaseFunction):
             ))
 
         listA.elements.extend(listB.elements)
-        return RTResult().success(Number.null)
+        return RTResult().success(String.none)
 
     execute_extend.arg_names = ["listA", "listB"]
 
@@ -1893,7 +1893,7 @@ class BuiltInFunction(BaseFunction):
                 exec_ctx
             ))
 
-        return RTResult().success(Number.null)
+        return RTResult().success(String.none)
 
     execute_run.arg_names = ["fn"]
 
