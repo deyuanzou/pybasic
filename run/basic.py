@@ -2020,7 +2020,7 @@ class Interpreter:
         if res.should_return(): return res
 
         context.symbol_table.set(var_name, value)
-        return res.success(value)
+        return res.success(String.none)
 
     def visit_BinOpNode(self, node, context):
         res = RTResult()

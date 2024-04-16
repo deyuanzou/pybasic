@@ -2125,11 +2125,13 @@ class Interpreter:
 
         res = RTResult()
         var_name = node.var_name_tok.value
+        # print(var_name)
         value = res.register(self.visit(node.value_node, context))
+        # print(value)
         if res.should_return(): return res
 
         context.symbol_table.set(var_name, value)
-        return res.success(value)
+        return res.success(String.none)
 
     def visit_BinOpNode(self, node, context):
 
@@ -2334,6 +2336,7 @@ class Interpreter:
             if res.should_return(): return res
 
         print(args)
+
 
         return_value = res.register(value_to_call.execute(args))
         if res.should_return(): return res
